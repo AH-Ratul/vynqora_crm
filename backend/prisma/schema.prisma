@@ -1,0 +1,219 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  MANAGER
+  SALES_REP
+  SUPPORT_AGENT
+  MARKETING
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  UNQUALIFIED
+  CONVERTED
+}
+
+enum DealStage {
+  LEAD
+  PROPOSAL
+  NEGOTIATION
+  CLOSED_WON
+  CLOSED_LOST
+}
+
+enum ActivityType {
+  EMAIL
+  CALL
+  MEETING
+  NOTE
+  TASK
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  DONE
+  CANCELLED
+}
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  passwordHash  String
+  firstName     String
+  lastName      String
+  role          Role      @default(SALES_REP)
+  isActive      Boolean   @default(true)
+  avatarUrl     String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  assignedLeads    Lead[]       @relation("AssignedLeads")
+  assignedDeals    Deal[]       @relation("AssignedDeals")
+  assignedTasks    Task[]       @relation("AssignedTasks")
+  createdTasks     Task[]       @relation("CreatedTasks")
+  activities       Activity[]
+  auditLogs        AuditLog[]
+  notifications    Notification[]
+  refreshTokens    RefreshToken[]
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model Company {
+  id          String    @id @default(uuid())
+  name        String
+  industry    String?
+  size        String?
+  website     String?
+  phone       String?
+  address     String?
+  city        String?
+  country     String?
+  notes       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  contacts    Contact[]
+  deals       Deal[]
+}
+
+model Contact {
+  id          String    @id @default(uuid())
+  firstName   String
+  lastName    String
+  email       String?   @unique
+  phone       String?
+  title       String?
+  tags        String[]
+  notes       String?
+  avatarUrl   String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  companyId   String?
+  company     Company?  @relation(fields: [companyId], references: [id])
+  leads       Lead[]
+  deals       Deal[]
+  activities  Activity[]
+  tasks       Task[]
+  customFields Json?
+}
+
+model Lead {
+  id          String      @id @default(uuid())
+  source      String?
+  status      LeadStatus  @default(NEW)
+  score       Int?
+  notes       String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  contactId   String
+  contact     Contact     @relation(fields: [contactId], references: [id])
+  assignedToId String?
+  assignedTo  User?       @relation("AssignedLeads", fields: [assignedToId], references: [id])
+  deal        Deal?
+}
+
+model Deal {
+  id              String      @id @default(uuid())
+  title           String
+  value           Decimal?    @db.Decimal(15, 2)
+  stage           DealStage   @default(LEAD)
+  probability     Int?
+  expectedCloseDate DateTime?
+  notes           String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  contactId       String
+  contact         Contact     @relation(fields: [contactId], references: [id])
+  companyId       String?
+  company         Company?    @relation(fields: [companyId], references: [id])
+  assignedToId    String?
+  assignedTo      User?       @relation("AssignedDeals", fields: [assignedToId], references: [id])
+  leadId          String?     @unique
+  lead            Lead?       @relation(fields: [leadId], references: [id])
+  activities      Activity[]
+  tasks           Task[]
+  customFields    Json?
+}
+
+model Activity {
+  id          String       @id @default(uuid())
+  type        ActivityType
+  subject     String
+  body        String?
+  occurredAt  DateTime     @default(now())
+  createdAt   DateTime     @default(now())
+
+  contactId   String?
+  contact     Contact?     @relation(fields: [contactId], references: [id])
+  dealId      String?
+  deal        Deal?        @relation(fields: [dealId], references: [id])
+  createdById String
+  createdBy   User         @relation(fields: [createdById], references: [id])
+}
+
+model Task {
+  id          String     @id @default(uuid())
+  title       String
+  description String?
+  status      TaskStatus @default(PENDING)
+  dueDate     DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  contactId   String?
+  contact     Contact?   @relation(fields: [contactId], references: [id])
+  dealId      String?
+  deal        Deal?      @relation(fields: [dealId], references: [id])
+  assignedToId String?
+  assignedTo  User?      @relation("AssignedTasks", fields: [assignedToId], references: [id])
+  createdById String
+  createdBy   User       @relation("CreatedTasks", fields: [createdById], references: [id])
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  link      String?
+  createdAt DateTime @default(now())
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  action     String
+  entity     String
+  entityId   String
+  oldValues  Json?
+  newValues  Json?
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+}
