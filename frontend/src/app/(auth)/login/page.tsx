@@ -89,6 +89,29 @@ export default function LoginPage() {
             {login.isPending && <Loader2 className="size-4 animate-spin" />}
             Sign in
           </Button>
+
+          <div className="relative py-1">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t border-border" />
+            </div>
+            <div className="relative flex justify-center text-[11px] uppercase tracking-wider">
+              <span className="bg-card px-2 text-muted-foreground">or</span>
+            </div>
+          </div>
+
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full h-9"
+            disabled={login.isPending}
+            onClick={() => login.mutate({ email: 'admin@email.com', password: 'admin123' })}
+          >
+            {login.isPending && <Loader2 className="size-4 animate-spin" />}
+            Demo Admin Login
+          </Button>
+          <p className="text-center text-[11px] text-muted-foreground">
+            admin@email.com · admin123
+          </p>
         </form>
 
         <p className="text-center text-xs text-muted-foreground">
